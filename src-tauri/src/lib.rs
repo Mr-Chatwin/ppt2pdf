@@ -341,7 +341,7 @@ mod pdf_converter {
     use windows::core::{HSTRING, GUID};
     use windows::Storage::StorageFile;
     use windows::Data::Pdf::{PdfDocument, PdfPageRenderOptions};
-    use windows::Storage::Streams::{InMemoryRandomAccessStream, DataReader};
+    use windows::Storage::Streams::{InMemoryRandomAccessStream, DataReader, IRandomAccessStream};
     use windows::Graphics::Imaging::BitmapEncoder;
 
     pub async fn convert_pdf_batch(
@@ -416,6 +416,7 @@ mod pdf_converter {
         for i in 0..page_count {
             let page = doc.GetPage(i).map_err(|e| e.to_string())?;
             let stream = InMemoryRandomAccessStream::new().map_err(|e| e.to_string())?;
+            let random_stream: IRandomAccessStream = stream.cast().map_err(|e| e.to_string())?;
 
             let options = PdfPageRenderOptions::new().map_err(|e| e.to_string())?;
             options.SetBitmapEncoderId(encoder_guid).map_err(|e| e.to_string())?;
@@ -425,13 +426,13 @@ mod pdf_converter {
             options.SetDestinationWidth((size.Width * scale) as u32).map_err(|e| e.to_string())?;
             options.SetDestinationHeight((size.Height * scale) as u32).map_err(|e| e.to_string())?;
 
-            page.RenderToStreamWithOptionsAsync(&stream, &options)
+            page.RenderToStreamWithOptionsAsync(&random_stream, &options)
                 .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?
                 .await
                 .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?;
 
-            let size_bytes = stream.Size().map_err(|e| e.to_string())?;
-            let input_stream = stream.GetInputStreamAt(0).map_err(|e| e.to_string())?;
+            let size_bytes = random_stream.Size().map_err(|e| e.to_string())?;
+            let input_stream = random_stream.GetInputStreamAt(0).map_err(|e| e.to_string())?;
             let reader = DataReader::FromInputStream(&input_stream).map_err(|e| e.to_string())?;
             
             reader.LoadAsync(size_bytes as u32)
