@@ -53,9 +53,9 @@ jobs:
           includeRelease: true
 
       - name: Rename standalone executable
-        run: Rename-Item -Path src-tauri\target\release\ppt2pdf-tauri.exe -NewName ppt2pdf-tauri_${{ github.ref_name }}_standalone.exe
+        run: Rename-Item -Path src-tauri\target\release\office2pdf.exe -NewName office2pdf_${{ github.ref_name }}_standalone.exe
 
       - name: Upload standalone executable
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/ppt2pdf-tauri_${{ github.ref_name }}_standalone.exe
+          files: src-tauri/target/release/office2pdf_${{ github.ref_name }}_standalone.exe

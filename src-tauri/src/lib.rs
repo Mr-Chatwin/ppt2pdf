@@ -254,7 +254,7 @@ $results | ConvertTo-Json -Depth 3 | Out-File -FilePath '{}' -Encoding UTF8
         
         for file in libre_files {
             if soffice.is_empty() {
-                results.push(BatchResult { path: file.clone(), success: false, pdf_path: None, error_msg: Some("LibreOffice 未安装".to_string()) });
+                results.push(BatchResult { path: file.clone(), success: false, pdf_path: None, output_path: None, error_msg: Some("LibreOffice 未安装".to_string()) });
                 continue;
             }
             let parent = Path::new(&file).parent().unwrap_or(Path::new("")).to_str().unwrap();
@@ -263,12 +263,12 @@ $results | ConvertTo-Json -Depth 3 | Out-File -FilePath '{}' -Encoding UTF8
             
             if let Ok(o) = out {
                 if o.status.success() {
-                    results.push(BatchResult { path: file, success: true, pdf_path: Some(pdf_path), error_msg: None });
+                    results.push(BatchResult { path: file, success: true, pdf_path: Some(pdf_path), output_path: None, error_msg: None });
                 } else {
-                    results.push(BatchResult { path: file, success: false, pdf_path: None, error_msg: Some(String::from_utf8_lossy(&o.stderr).to_string()) });
+                    results.push(BatchResult { path: file, success: false, pdf_path: None, output_path: None, error_msg: Some(String::from_utf8_lossy(&o.stderr).to_string()) });
                 }
             } else {
-                results.push(BatchResult { path: file, success: false, pdf_path: None, error_msg: Some("执行调用异常".to_string()) });
+                results.push(BatchResult { path: file, success: false, pdf_path: None, output_path: None, error_msg: Some("执行调用异常".to_string()) });
             }
         }
     }
@@ -338,7 +338,7 @@ pub fn run() {
 mod pdf_converter {
     use super::BatchResult;
     use std::path::Path;
-    use windows::core::{HSTRING, GUID};
+    use windows::core::{HSTRING, GUID, Interface, Error as WinError};
     use windows::Storage::StorageFile;
     use windows::Data::Pdf::{PdfDocument, PdfPageRenderOptions};
     use windows::Storage::Streams::{InMemoryRandomAccessStream, DataReader, IRandomAccessStream};
@@ -352,8 +352,8 @@ mod pdf_converter {
         let mut results = Vec::new();
         
         let encoder_guid = match format.to_lowercase().as_str() {
-            "jpg" | "jpeg" => BitmapEncoder::JpegEncoderId().map_err(|e| e.to_string())?,
-            _ => BitmapEncoder::PngEncoderId().map_err(|e| e.to_string())?,
+            "jpg" | "jpeg" => BitmapEncoder::JpegEncoderId().map_err(|e: WinError| e.to_string())?,
+            _ => BitmapEncoder::PngEncoderId().map_err(|e: WinError| e.to_string())?,
         };
 
         for path_str in paths {
@@ -402,46 +402,46 @@ mod pdf_converter {
         let win_path = abs_path.to_string_lossy().replace("\\\\?\\", "");
 
         let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(win_path))
-            .map_err(|e| format!("加载PDF失败: {}", e))?
-            .await
-            .map_err(|e| format!("加载PDF失败: {}", e))?;
+            .map_err(|e: WinError| format!("加载PDF失败: {}", e))?
+            .get()
+            .map_err(|e: WinError| format!("加载PDF失败: {}", e))?;
 
         let doc = PdfDocument::LoadFromFileAsync(&file)
-            .map_err(|e| format!("打开PDF失败: {}", e))?
-            .await
-            .map_err(|e| format!("打开PDF失败: {}", e))?;
+            .map_err(|e: WinError| format!("打开PDF失败: {}", e))?
+            .get()
+            .map_err(|e: WinError| format!("打开PDF失败: {}", e))?;
 
-        let page_count = doc.PageCount().map_err(|e| e.to_string())?;
+        let page_count = doc.PageCount().map_err(|e: WinError| e.to_string())?;
 
         for i in 0..page_count {
-            let page = doc.GetPage(i).map_err(|e| e.to_string())?;
-            let stream = InMemoryRandomAccessStream::new().map_err(|e| e.to_string())?;
-            let random_stream: IRandomAccessStream = stream.cast().map_err(|e| e.to_string())?;
+            let page = doc.GetPage(i).map_err(|e: WinError| e.to_string())?;
+            let stream = InMemoryRandomAccessStream::new().map_err(|e: WinError| e.to_string())?;
+            let random_stream: IRandomAccessStream = stream.cast().map_err(|e: WinError| e.to_string())?;
 
-            let options = PdfPageRenderOptions::new().map_err(|e| e.to_string())?;
-            options.SetBitmapEncoderId(encoder_guid).map_err(|e| e.to_string())?;
+            let options = PdfPageRenderOptions::new().map_err(|e: WinError| e.to_string())?;
+            options.SetBitmapEncoderId(encoder_guid).map_err(|e: WinError| e.to_string())?;
             
-            let size = page.Size().map_err(|e| e.to_string())?;
+            let size = page.Size().map_err(|e: WinError| e.to_string())?;
             let scale = dpi / 96.0;
-            options.SetDestinationWidth((size.Width * scale) as u32).map_err(|e| e.to_string())?;
-            options.SetDestinationHeight((size.Height * scale) as u32).map_err(|e| e.to_string())?;
+            options.SetDestinationWidth((size.Width * scale) as u32).map_err(|e: WinError| e.to_string())?;
+            options.SetDestinationHeight((size.Height * scale) as u32).map_err(|e: WinError| e.to_string())?;
 
-            page.RenderToStreamWithOptionsAsync(&random_stream, &options)
-                .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?
-                .await
-                .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?;
+            page.RenderWithOptionsToStreamAsync(&random_stream, &options)
+                .map_err(|e: WinError| format!("渲染第 {} 页失败: {}", i + 1, e))?
+                .get()
+                .map_err(|e: WinError| format!("渲染第 {} 页失败: {}", i + 1, e))?;
 
-            let size_bytes = random_stream.Size().map_err(|e| e.to_string())?;
-            let input_stream = random_stream.GetInputStreamAt(0).map_err(|e| e.to_string())?;
-            let reader = DataReader::FromInputStream(&input_stream).map_err(|e| e.to_string())?;
+            let size_bytes = random_stream.Size().map_err(|e: WinError| e.to_string())?;
+            let input_stream = random_stream.GetInputStreamAt(0).map_err(|e: WinError| e.to_string())?;
+            let reader = DataReader::CreateDataReader(&input_stream).map_err(|e: WinError| e.to_string())?;
             
             reader.LoadAsync(size_bytes as u32)
-                .map_err(|e| e.to_string())?
-                .await
-                .map_err(|e| e.to_string())?;
+                .map_err(|e: WinError| e.to_string())?
+                .get()
+                .map_err(|e: WinError| e.to_string())?;
 
             let mut buffer = vec![0u8; size_bytes as usize];
-            reader.ReadBytes(&mut buffer).map_err(|e| e.to_string())?;
+            reader.ReadBytes(&mut buffer).map_err(|e: WinError| e.to_string())?;
 
             let out_img_name = format!("{}_{:03}.{}", file_stem, i + 1, format_ext.to_lowercase());
             std::fs::write(out_dir.join(out_img_name), buffer).map_err(|e| format!("写入图片失败: {}", e))?;
