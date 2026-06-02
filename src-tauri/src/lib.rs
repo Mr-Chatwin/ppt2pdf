@@ -339,7 +339,7 @@ mod pdf_converter {
     use super::BatchResult;
     use std::path::Path;
     use windows::core::{HSTRING, GUID};
-    use windows::Storage::{StorageFile, IStorageFile};
+    use windows::Storage::StorageFile;
     use windows::Data::Pdf::{PdfDocument, PdfPageRenderOptions};
     use windows::Storage::Streams::{InMemoryRandomAccessStream, DataReader, IRandomAccessStream};
     use windows::Graphics::Imaging::BitmapEncoder;
@@ -401,13 +401,12 @@ mod pdf_converter {
         let abs_path = std::fs::canonicalize(pdf_path).map_err(|e| e.to_string())?;
         let win_path = abs_path.to_string_lossy().replace("\\\\?\\", "");
 
-        let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(&win_path))
+        let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(win_path))
             .map_err(|e| format!("加载PDF失败: {}", e))?
             .await
             .map_err(|e| format!("加载PDF失败: {}", e))?;
 
-        let doc_file: windows::Storage::IStorageFile = file.cast().map_err(|e| e.to_string())?;
-        let doc = PdfDocument::LoadFromFileAsync(&doc_file)
+        let doc = PdfDocument::LoadFromFileAsync(&file)
             .map_err(|e| format!("打开PDF失败: {}", e))?
             .await
             .map_err(|e| format!("打开PDF失败: {}", e))?;
