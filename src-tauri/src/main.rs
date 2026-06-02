@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    ppt2pdf_tauri_lib::run()
+    deskkit_tauri_lib::run()
 }

@@ -31,19 +31,77 @@ body::before{
 }
 @keyframes bgPulse{0%{opacity:1;transform:scale(1)}100%{opacity:.7;transform:scale(1.05)}}
 
-/* App */
-.app{max-width:1000px;margin:0 auto;padding:40px 24px;min-height:100vh;display:flex;flex-direction:column}
+/* App Layout */
+.app-container {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
 
-/* Header */
-.app-header{text-align:center;margin-bottom:48px}
-.logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:12px}
+.app-sidebar {
+  width: 280px;
+  background: rgba(13, 13, 33, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.app-main {
+  flex: 1;
+  padding: 40px 48px;
+  overflow-y: auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar Logo & Badges */
+.app-sidebar .logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
 .logo-icon{font-size:32px;animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-.logo h1{
-  font-size:36px;font-weight:700;
+.app-sidebar .logo h1{
+  font-size:26px;font-weight:700;
   background:var(--accent-gradient);-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-0.5px;
 }
+.sidebar-badges {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.sidebar-badges .badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 500;
+}
+.word-badge { background: #1e3e70; }
+.excel-badge { background: #105c31; }
+.ppt-badge { background: #9b3318; }
+
+.app-sidebar .subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
 .engine-select{
   appearance:none;-webkit-appearance:none;
   background:rgba(99,102,241,0.1) url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236366f1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 6px center;
@@ -175,9 +233,58 @@ body::before{
 .export-overlay p{color:var(--text-secondary);font-size:15px}
 
 /* Responsive */
-@media(max-width:640px){
-  .app{padding:24px 16px}
-  .logo h1{font-size:28px}
+@media(max-width: 860px){
+  .app-container {
+    flex-direction: column;
+  }
+  .app-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 24px;
+  }
+  .app-sidebar .logo {
+    justify-content: center;
+  }
+  .sidebar-badges {
+    justify-content: center;
+  }
+  .app-sidebar .subtitle {
+    text-align: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+  }
+  .sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nav-group-title {
+    width: 100%;
+    margin-top: 8px;
+    padding-left: 0;
+    text-align: center;
+  }
+  .menu-item {
+    flex: 1;
+    min-width: 150px;
+    justify-content: center;
+  }
+  .menu-badge {
+    position: static;
+    margin-left: 6px;
+  }
+  .app-main {
+    padding: 24px 16px;
+    height: auto;
+    overflow-y: visible;
+  }
+  .sidebar-footer {
+    display: none;
+  }
+  
   .drop-zone{padding:40px 20px}
   .drop-zone h2{font-size:16px}
   .preview-header{flex-direction:column;align-items:flex-start}
@@ -226,41 +333,85 @@ body::before{
 .file-item-status.error{color:var(--error)}
 .file-item-actions{display:flex;gap:6px;flex-shrink:0}
 
-/* ===== Mode Tabs ===== */
-.mode-tabs {
+/* ===== Sidebar Navigation ===== */
+.sidebar-nav {
   display: flex;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 4px;
-  margin-bottom: 24px;
-  gap: 4px;
-}
-.tab-btn {
+  flex-direction: column;
+  gap: 8px;
   flex: 1;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  padding: 10px 16px;
-  font-family: var(--font);
-  font-size: 14px;
+}
+
+.nav-group-title {
+  font-size: 11px;
   font-weight: 600;
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  transition: all var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-top: 16px;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  text-align: left;
+  width: 100%;
+  position: relative;
 }
-.tab-btn:hover {
+
+.menu-item:hover:not(.disabled) {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card-hover);
+  border-color: var(--border);
+  transform: translateX(2px);
 }
-.tab-btn.active {
+
+.menu-item.active {
   color: var(--text-primary);
   background: var(--accent-gradient);
-  box-shadow: 0 4px 12px var(--accent-glow);
+  border-color: transparent;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  font-weight: 600;
+}
+
+.menu-item.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menu-badge {
+  position: absolute;
+  right: 12px;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ===== Sidebar Footer ===== */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer p {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
 }
 
 /* ===== Convert Settings ===== */

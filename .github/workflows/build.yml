@@ -45,8 +45,8 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           $tag = "app-v$version"
-          $exePath = "src-tauri\target\release\office2pdf.exe"
-          $newName = "office2pdf_$version`_standalone.exe"
+          $exePath = "src-tauri\target\release\deskkit.exe"
+          $newName = "DeskKit_$version`_standalone.exe"
           Copy-Item $exePath $newName
           gh release upload $tag $newName --clobber
         env:

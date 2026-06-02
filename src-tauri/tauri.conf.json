@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "office2pdf",
+  "productName": "DeskKit",
   "version": "1.2.0",
-  "identifier": "com.cuito.ppt2pdf-tauri",
+  "identifier": "com.cuito.deskkit",
   "build": {
     "frontendDist": "../src"
   },
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ppt2pdf-tauri",
+        "title": "DeskKit",
         "width": 800,
         "height": 600
       }

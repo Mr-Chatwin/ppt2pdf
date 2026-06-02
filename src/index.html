@@ -3,31 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>office2pdf — 极速跨端文档转换工具</title>
+    <title>DeskKit — 极简离线桌面工具箱</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="app">
-        <header class="app-header">
+    <div class="app-container">
+        <aside class="app-sidebar">
             <div class="logo">
                 <span class="logo-icon">⚡</span>
-                <h1>office2pdf</h1>
+                <h1>DeskKit</h1>
             </div>
-            <div style="margin-top:8px; margin-bottom: 5px;">
-                <span class="badge" style="background:#1e3e70; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; margin-right:6px;">📝 Word</span>
-                <span class="badge" style="background:#105c31; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px; margin-right:6px;">📗 Excel</span>
-                <span class="badge" style="background:#9b3318; color:#fff; padding:4px 8px; border-radius:4px; font-size:12px;">📊 PPT</span>
+            <div class="sidebar-badges">
+                <span class="badge word-badge">📝 Word</span>
+                <span class="badge excel-badge">📗 Excel</span>
+                <span class="badge ppt-badge">📊 PPT</span>
             </div>
             <p class="subtitle">加载中...</p>
-        </header>
+
+            <nav class="sidebar-nav">
+                <div class="nav-group-title">日常工具</div>
+                <button id="tabOffice2Pdf" class="menu-item active">
+                    <span class="menu-icon">📝</span>
+                    <span class="menu-text">Office 转 PDF</span>
+                </button>
+                <button id="tabPdf2Image" class="menu-item">
+                    <span class="menu-icon">🖼️</span>
+                    <span class="menu-text">PDF 转图片</span>
+                </button>
+                
+                <div class="nav-group-title">即将加入</div>
+                <button class="menu-item disabled" disabled>
+                    <span class="menu-icon">🗜️</span>
+                    <span class="menu-text">图片无损压缩</span>
+                    <span class="menu-badge">Soon</span>
+                </button>
+                <button class="menu-item disabled" disabled>
+                    <span class="menu-icon">🔗</span>
+                    <span class="menu-text">JSON/文本处理</span>
+                    <span class="menu-badge">Soon</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <p>🔒 100% 本地离线安全处理</p>
+                <p>Tauri 极速版 v1.2.0</p>
+            </div>
+        </aside>
 
         <main class="app-main">
-            <!-- Mode Tabs -->
-            <div class="mode-tabs">
-                <button id="tabOffice2Pdf" class="tab-btn active">📝 Office 转 PDF</button>
-                <button id="tabPdf2Image" class="tab-btn">🖼️ PDF 转图片</button>
-            </div>
 
             <div id="setupSection" class="setup-section hidden">
                 <div class="setup-card">
@@ -108,9 +132,6 @@
             </div>
         </main>
 
-        <footer class="app-footer">
-            <p>🔒 所有文件在本地处理，不会上传到任何服务器 | Tauri 高性能极速版本</p>
-        </footer>
     </div>
 
     <!-- Tauri 注入后可用 window.__TAURI__ -->

@@ -152,7 +152,7 @@
             document.querySelector('#dropZone h2').textContent = '拖拽 Office 文件到这里';
             document.querySelector('.drop-zone-hint').textContent = '支持 .docx / .xlsx / .pptx 以及对应的老版本格式格式，可同时拖放';
 
-            document.querySelector('.subtitle').style.visibility = 'visible';
+            document.querySelector('.subtitle').classList.remove('hidden');
 
             if (hasOfficeEngine) {
                 setupSection.classList.add('hidden');
@@ -169,7 +169,7 @@
             document.querySelector('#dropZone h2').textContent = '拖拽 PDF 文件到这里';
             document.querySelector('.drop-zone-hint').textContent = '支持 .pdf 格式，可同时拖放';
 
-            document.querySelector('.subtitle').style.visibility = 'hidden';
+            document.querySelector('.subtitle').classList.add('hidden');
 
             setupSection.classList.add('hidden');
             dropZone.classList.remove('hidden');
