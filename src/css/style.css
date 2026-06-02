@@ -225,3 +225,88 @@ body::before{
 .file-item-status.success{color:var(--success)}
 .file-item-status.error{color:var(--error)}
 .file-item-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ===== Mode Tabs ===== */
+.mode-tabs {
+  display: flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin-bottom: 24px;
+  gap: 4px;
+}
+.tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 10px 16px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+.tab-btn.active {
+  color: var(--text-primary);
+  background: var(--accent-gradient);
+  box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+/* ===== Convert Settings ===== */
+.settings-panel {
+  display: flex;
+  gap: 24px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px 20px;
+  margin-top: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.setting-item label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.setting-select {
+  appearance: none;
+  background: rgba(255,255,255,0.04) url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a7a96' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 8px center;
+  background-size: 12px;
+  padding: 6px 28px 6px 12px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+  transition: all var(--transition);
+}
+.setting-select:hover {
+  background-color: rgba(255,255,255,0.08);
+  border-color: var(--border-hover);
+}
+.setting-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+

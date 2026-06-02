@@ -23,6 +23,12 @@
         </header>
 
         <main class="app-main">
+            <!-- Mode Tabs -->
+            <div class="mode-tabs">
+                <button id="tabOffice2Pdf" class="tab-btn active">📝 Office 转 PDF</button>
+                <button id="tabPdf2Image" class="tab-btn">🖼️ PDF 转图片</button>
+            </div>
+
             <div id="setupSection" class="setup-section hidden">
                 <div class="setup-card">
                     <div class="setup-icon">🔧</div>
@@ -60,6 +66,25 @@
                     <h2>拖拽 Office 文件到这里</h2>
                     <p>或 <label id="fileInputLabel" class="file-label" style="cursor:pointer">点击选择文件</label></p>
                     <p class="drop-zone-hint">支持 .docx / .xlsx / .pptx 以及对应的老版本格式格式，可同时拖放</p>
+                </div>
+            </div>
+
+            <!-- 参数设置区 -->
+            <div id="settingsPanel" class="settings-panel hidden">
+                <div class="setting-item">
+                    <label for="formatSelect">保存格式：</label>
+                    <select id="formatSelect" class="setting-select">
+                        <option value="png" selected>PNG</option>
+                        <option value="jpg">JPG</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="dpiSelect">渲染清晰度 (DPI)：</label>
+                    <select id="dpiSelect" class="setting-select">
+                        <option value="96">96 DPI (屏幕/网页)</option>
+                        <option value="150" selected>150 DPI (标准清晰)</option>
+                        <option value="300">300 DPI (高清印刷)</option>
+                    </select>
                 </div>
             </div>
 

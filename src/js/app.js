@@ -15,11 +15,16 @@
     const resultsSection = document.getElementById('resultsSection');
     const fileList = document.getElementById('fileList');
     const fileInputLabel = document.getElementById('fileInputLabel');
+    const tabOffice2Pdf = document.getElementById('tabOffice2Pdf');
+    const tabPdf2Image = document.getElementById('tabPdf2Image');
+    const settingsPanel = document.getElementById('settingsPanel');
 
     // 状态管理
     let conversionQueue = [];
     let isConverting = false;
     let stopRequested = false;
+    let currentMode = 'office2pdf';
+    let hasOfficeEngine = false;
 
     // --- 初始化 ---
     async function init() {
@@ -29,6 +34,7 @@
             // status -> { available: true, engine: 'office', all_engines: ['office', 'wps'] }
             
             if (status.available) {
+                hasOfficeEngine = true;
                 const engineNames = { office: 'Microsoft Office', wps: 'WPS Office', libreoffice: 'LibreOffice' };
                 const engineName = engineNames[status.engine] || status.engine;
                 showToast(`已检测到 ${engineName} 转换引擎`, 'success');
@@ -56,10 +62,12 @@
 
                 dropZone.classList.remove('hidden');
             } else {
+                hasOfficeEngine = false;
                 subtitle.textContent = '缺少转换引擎';
                 setupSection.classList.remove('hidden');
             }
         } catch (e) {
+            hasOfficeEngine = false;
             subtitle.textContent = '引擎检测失败';
             showToast('引擎检测出错: ' + e, 'error');
             dropZone.classList.remove('hidden');
@@ -69,11 +77,15 @@
     }
 
     function bindEvents() {
+        // Mode Tabs Click
+        tabOffice2Pdf.addEventListener('click', () => switchMode('office2pdf'));
+        tabPdf2Image.addEventListener('click', () => switchMode('pdf2image'));
+
         // 使用后台 rfd 原生弹窗
         fileInputLabel.addEventListener('click', async () => {
             if (isConverting) return;
             try {
-                const paths = await invoke('select_files');
+                const paths = await invoke('select_files', { mode: currentMode });
                 if (paths && paths.length > 0) {
                     addFilesToQueue(paths);
                 }
@@ -92,11 +104,20 @@
             const paths = event.payload.paths || event.payload; // 兼容不同版本的 payload 结构
             if (!Array.isArray(paths)) return;
             
-            const validPaths = paths.filter(p => /\.(pptx?|ppsx?|pps|docx?|doc|xlsx?|xls|csv)$/i.test(p));
-            if (validPaths.length > 0) {
-                addFilesToQueue(validPaths);
+            if (currentMode === 'office2pdf') {
+                const validPaths = paths.filter(p => /\.(pptx?|ppsx?|pps|docx?|doc|xlsx?|xls|csv)$/i.test(p));
+                if (validPaths.length > 0) {
+                    addFilesToQueue(validPaths);
+                } else {
+                    showToast('请拖入有效的 Office(Word/Excel/PPT) 文件', 'error');
+                }
             } else {
-                showToast('请拖入有效的 Office(Word/Excel/PPT) 文件', 'error');
+                const validPaths = paths.filter(p => /\.pdf$/i.test(p));
+                if (validPaths.length > 0) {
+                    addFilesToQueue(validPaths);
+                } else {
+                    showToast('请拖入有效的 PDF 文件', 'error');
+                }
             }
             dropZone.classList.remove('drag-over');
         });
@@ -108,6 +129,51 @@
         document.getElementById('stopConvertBtn')?.addEventListener('click', () => { stopRequested = true; });
         document.getElementById('newConvertBtn')?.addEventListener('click', clearQueue);
         document.getElementById('addMoreBtn')?.addEventListener('click', () => fileInputLabel.click());
+    }
+
+    function switchMode(mode) {
+        if (isConverting) {
+            showToast('正在转换中，无法切换模式', 'warning');
+            return;
+        }
+        if (conversionQueue.length > 0) {
+            if (!confirm('切换模式将清空当前文件列表，是否继续？')) {
+                return;
+            }
+            clearQueue();
+        }
+        currentMode = mode;
+
+        if (mode === 'office2pdf') {
+            tabOffice2Pdf.classList.add('active');
+            tabPdf2Image.classList.remove('active');
+            settingsPanel.classList.add('hidden');
+
+            document.querySelector('#dropZone h2').textContent = '拖拽 Office 文件到这里';
+            document.querySelector('.drop-zone-hint').textContent = '支持 .docx / .xlsx / .pptx 以及对应的老版本格式格式，可同时拖放';
+
+            document.querySelector('.subtitle').style.visibility = 'visible';
+
+            if (hasOfficeEngine) {
+                setupSection.classList.add('hidden');
+                dropZone.classList.remove('hidden');
+            } else {
+                setupSection.classList.remove('hidden');
+                dropZone.classList.add('hidden');
+            }
+        } else {
+            tabOffice2Pdf.classList.remove('active');
+            tabPdf2Image.classList.add('active');
+            settingsPanel.classList.remove('hidden');
+
+            document.querySelector('#dropZone h2').textContent = '拖拽 PDF 文件到这里';
+            document.querySelector('.drop-zone-hint').textContent = '支持 .pdf 格式，可同时拖放';
+
+            document.querySelector('.subtitle').style.visibility = 'hidden';
+
+            setupSection.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+        }
     }
 
     function addFilesToQueue(paths) {
@@ -183,17 +249,24 @@
 
             let actionsHtml = '';
             if (item.status === 'success' && item.result) {
-                actionsHtml = `
-                    <button class="btn btn-sm btn-ghost" onclick="window.openFile('${escapeJs(item.result)}')">打开 PDF</button>
-                    <button class="btn btn-sm btn-ghost" onclick="window.openFolder('${escapeJs(item.result)}')">打开文件夹</button>
-                `;
+                if (/\.pdf$/i.test(item.name)) {
+                    actionsHtml = `
+                        <button class="btn btn-sm btn-ghost" onclick="window.openFolder('${escapeJs(item.result)}')">打开文件夹</button>
+                    `;
+                } else {
+                    actionsHtml = `
+                        <button class="btn btn-sm btn-ghost" onclick="window.openFile('${escapeJs(item.result)}')">打开 PDF</button>
+                        <button class="btn btn-sm btn-ghost" onclick="window.openFolder('${escapeJs(item.result)}')">打开文件夹</button>
+                    `;
+                }
             } else if (item.status === 'pending') {
                 actionsHtml = `<button class="btn btn-sm btn-ghost btn-danger" onclick="removeQueueItem(${i})">移除</button>`;
             }
 
+            const isPdf = /\.pdf$/i.test(item.name);
             const isWord = /\.(docx?|doc)$/i.test(item.name);
             const isExcel = /\.(xlsx?|xls|csv)$/i.test(item.name);
-            const icon = isWord ? '📝' : (isExcel ? '📗' : '📊');
+            const icon = isPdf ? '📄' : (isWord ? '📝' : (isExcel ? '📗' : '📊'));
 
             div.innerHTML = `
                 <div class="file-item-icon">${icon}</div>
@@ -264,15 +337,22 @@
         const paths = pendingItems.map(item => item.path);
 
         try {
-            // 一次性将全部路径推入底层分发器
-            const results = await invoke('convert_batch', { paths });
+            // 根据转换模式分别调用对应的底层 API 引擎
+            let results = [];
+            if (currentMode === 'office2pdf') {
+                results = await invoke('convert_batch', { paths });
+            } else {
+                const format = document.getElementById('formatSelect').value;
+                const dpi = parseFloat(document.getElementById('dpiSelect').value);
+                results = await invoke('convert_pdf_to_images', { paths, format, dpi });
+            }
             
             results.forEach(res => {
                 const item = conversionQueue.find(i => i.path === res.path);
                 if (item) {
                     if (res.success) {
                         item.status = 'success';
-                        item.result = res.pdf_path;
+                        item.result = res.output_path || res.pdf_path;
                         successCount++;
                     } else {
                         item.status = 'error';

@@ -21,11 +21,12 @@ struct EngineStatus {
     all_engines: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct BatchResult {
     path: String,
     success: bool,
     pdf_path: Option<String>,
+    output_path: Option<String>,
     error_msg: Option<String>,
 }
 
@@ -291,12 +292,28 @@ fn open_folder(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn select_files() -> Result<Vec<String>, String> {
-    if let Some(files) = rfd::AsyncFileDialog::new().add_filter("Office Documents", &["ppt", "pptx", "pps", "ppsx", "doc", "docx", "xls", "xlsx", "csv"]).pick_files().await {
+async fn select_files(mode: String) -> Result<Vec<String>, String> {
+    let mut dialog = rfd::AsyncFileDialog::new();
+    if mode == "pdf2image" {
+        dialog = dialog.add_filter("PDF Document", &["pdf"]);
+    } else {
+        dialog = dialog.add_filter("Office Documents", &["ppt", "pptx", "pps", "ppsx", "doc", "docx", "xls", "xlsx", "csv"]);
+    }
+    
+    if let Some(files) = dialog.pick_files().await {
         Ok(files.into_iter().map(|f| f.path().to_string_lossy().into_owned()).collect())
     } else {
         Ok(vec![])
     }
+}
+
+#[tauri::command]
+async fn convert_pdf_to_images(
+    paths: Vec<String>,
+    format: String,
+    dpi: f32,
+) -> Result<Vec<BatchResult>, String> {
+    pdf_converter::convert_pdf_batch(paths, format, dpi).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -308,10 +325,149 @@ pub fn run() {
             check_engines,
             set_engine,
             convert_batch,
+            convert_pdf_to_images,
             open_file,
             open_folder,
             select_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(target_os = "windows")]
+mod pdf_converter {
+    use super::BatchResult;
+    use std::path::Path;
+    use windows::core::{HSTRING, GUID};
+    use windows::Storage::StorageFile;
+    use windows::Data::Pdf::{PdfDocument, PdfPageRenderOptions};
+    use windows::Storage::Streams::{InMemoryRandomAccessStream, DataReader};
+    use windows::Graphics::Imaging::BitmapEncoder;
+
+    pub async fn convert_pdf_batch(
+        paths: Vec<String>,
+        format: String,
+        dpi: f32,
+    ) -> Result<Vec<BatchResult>, String> {
+        let mut results = Vec::new();
+        
+        let encoder_guid = match format.to_lowercase().as_str() {
+            "jpg" | "jpeg" => BitmapEncoder::JpegEncoderId().map_err(|e| e.to_string())?,
+            _ => BitmapEncoder::PngEncoderId().map_err(|e| e.to_string())?,
+        };
+
+        for path_str in paths {
+            match convert_single_pdf(&path_str, &format, encoder_guid, dpi).await {
+                Ok(out_dir) => {
+                    results.push(BatchResult {
+                        path: path_str,
+                        success: true,
+                        pdf_path: None,
+                        output_path: Some(out_dir),
+                        error_msg: None,
+                    });
+                }
+                Err(err_msg) => {
+                    results.push(BatchResult {
+                        path: path_str,
+                        success: false,
+                        pdf_path: None,
+                        output_path: None,
+                        error_msg: Some(err_msg),
+                    });
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    async fn convert_single_pdf(
+        pdf_path_str: &str,
+        format_ext: &str,
+        encoder_guid: GUID,
+        dpi: f32,
+    ) -> Result<String, String> {
+        let pdf_path = Path::new(pdf_path_str);
+        if !pdf_path.exists() {
+            return Err("文件不存在".to_string());
+        }
+        
+        let file_stem = pdf_path.file_stem().ok_or("无效文件名")?.to_string_lossy().into_owned();
+        let parent_dir = pdf_path.parent().ok_or("找不到父目录")?;
+        
+        let out_dir = parent_dir.join(format!("{}_images", file_stem));
+        std::fs::create_dir_all(&out_dir).map_err(|e| format!("创建输出目录失败: {}", e))?;
+
+        let abs_path = std::fs::canonicalize(pdf_path).map_err(|e| e.to_string())?;
+        let win_path = abs_path.to_string_lossy().replace("\\\\?\\", "");
+
+        let file = StorageFile::GetFileFromPathAsync(&HSTRING::from(&win_path))
+            .map_err(|e| format!("加载PDF失败: {}", e))?
+            .await
+            .map_err(|e| format!("加载PDF失败: {}", e))?;
+
+        let doc = PdfDocument::LoadFromFileAsync(&file)
+            .map_err(|e| format!("打开PDF失败: {}", e))?
+            .await
+            .map_err(|e| format!("打开PDF失败: {}", e))?;
+
+        let page_count = doc.PageCount().map_err(|e| e.to_string())?;
+
+        for i in 0..page_count {
+            let page = doc.GetPage(i).map_err(|e| e.to_string())?;
+            let stream = InMemoryRandomAccessStream::new().map_err(|e| e.to_string())?;
+
+            let options = PdfPageRenderOptions::new().map_err(|e| e.to_string())?;
+            options.SetBitmapEncoderId(encoder_guid).map_err(|e| e.to_string())?;
+            
+            let size = page.Size().map_err(|e| e.to_string())?;
+            let scale = dpi / 96.0;
+            options.SetDestinationWidth((size.Width * scale) as u32).map_err(|e| e.to_string())?;
+            options.SetDestinationHeight((size.Height * scale) as u32).map_err(|e| e.to_string())?;
+
+            page.RenderToStreamWithOptionsAsync(&stream, &options)
+                .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?
+                .await
+                .map_err(|e| format!("渲染第 {} 页失败: {}", i + 1, e))?;
+
+            let size_bytes = stream.Size().map_err(|e| e.to_string())?;
+            let input_stream = stream.GetInputStreamAt(0).map_err(|e| e.to_string())?;
+            let reader = DataReader::CreateDataReader(&input_stream).map_err(|e| e.to_string())?;
+            
+            reader.LoadAsync(size_bytes as u32)
+                .map_err(|e| e.to_string())?
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut buffer = vec![0u8; size_bytes as usize];
+            reader.ReadBytes(&mut buffer).map_err(|e| e.to_string())?;
+
+            let out_img_name = format!("{}_{:03}.{}", file_stem, i + 1, format_ext.to_lowercase());
+            std::fs::write(out_dir.join(out_img_name), buffer).map_err(|e| format!("写入图片失败: {}", e))?;
+        }
+
+        Ok(out_dir.to_string_lossy().into_owned())
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+mod pdf_converter {
+    use super::BatchResult;
+    pub async fn convert_pdf_batch(
+        paths: Vec<String>,
+        _format: String,
+        _dpi: f32,
+    ) -> Result<Vec<BatchResult>, String> {
+        let mut results = Vec::new();
+        for p in paths {
+            results.push(BatchResult {
+                path: p,
+                success: false,
+                pdf_path: None,
+                output_path: None,
+                error_msg: Some("PDF 转换图片功能目前仅在 Windows 系统下生效。".to_string()),
+            });
+        }
+        Ok(results)
+    }
 }
