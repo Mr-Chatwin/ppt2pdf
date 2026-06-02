@@ -432,7 +432,7 @@ mod pdf_converter {
 
             let size_bytes = stream.Size().map_err(|e| e.to_string())?;
             let input_stream = stream.GetInputStreamAt(0).map_err(|e| e.to_string())?;
-            let reader = DataReader::CreateDataReader(&input_stream).map_err(|e| e.to_string())?;
+            let reader = DataReader::FromInputStream(&input_stream).map_err(|e| e.to_string())?;
             
             reader.LoadAsync(size_bytes as u32)
                 .map_err(|e| e.to_string())?
